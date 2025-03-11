@@ -30,20 +30,30 @@ class WebSocketServer implements MessageComponentInterface {
         ]));
     }
 
+
     public function onMessage(ConnectionInterface $from, $msg) {
-        // Kiírás csak a szerver konzolra, de NEM küldjük a klienseknek
-        fwrite(STDOUT, "Client {$from->resourceId} sent: $msg\n");
-    
+        // Ellenőrizzük, hogy a JSON érvényes-e
         $decoded = json_decode($msg, true);
     
-        if (!$decoded) {
+        if (!is_array($decoded)) {
+            echo "Invalid JSON received: $msg\n";
+            return;
+        }
+    
+        // Ellenőrizzük, hogy a "type" kulcs létezik-e
+        if (!isset($decoded["type"])) {
+            echo "Missing 'type' key in received message: $msg\n";
             return;
         }
     
         // Ha egy új tömb érkezik a klienstől, frissítjük
         if ($decoded["type"] === "update_data") {
+            if (!isset($decoded["data"]) || !is_array($decoded["data"])) {
+                echo "Invalid data format\n";
+                return;
+            }
+    
             $this->dataArray = $decoded["data"];
-           
     
             // Frissítést elküldjük minden kliensnek
             $this->broadcast([
@@ -55,9 +65,15 @@ class WebSocketServer implements MessageComponentInterface {
     
 
     public function onClose(ConnectionInterface $conn) {
+        $this->broadcast([
+            "type" => "user_disconnected",
+            "user_id" => $conn->resourceId
+        ]);
+    
         $this->clients->detach($conn);
         echo "Connection {$conn->resourceId} closed\n";
     }
+    
 
     public function onError(ConnectionInterface $conn, \Exception $e) {
         echo "Error: {$e->getMessage()}\n";
