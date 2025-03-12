@@ -12,23 +12,39 @@ use Ratchet\WebSocket\WsServer;
 
 class WebSocketServer implements MessageComponentInterface {
     protected $clients;
-    protected $dataArray; // Itt tároljuk a frontend által küldött tömböt
+    protected $position; // Itt tároljuk a frontend által küldött tömböt
+    protected $shapes;
 
     public function __construct() {
         $this->clients = new \SplObjectStorage;
-        $this->dataArray = []; // Üres tömb kezdetben
+        $this->position = []; // Üres tömb kezdetben
+        $this->shapes = [];
     }
 
     public function onOpen(ConnectionInterface $conn) {
         $this->clients->attach($conn);
         echo "New connection ({$conn->resourceId})\n";
-
+    
+        // Felhasználóhoz rendelt shape tárolása asszociatív tömbként
+        $this->shapes[] = [
+            "id" => $conn->resourceId,
+            "shape" => "triangle" // Vagy bármilyen más alakzat
+        ];
+    
         // Új kliensnek elküldjük az aktuális tömböt
         $conn->send(json_encode([
             "type" => "data_update",
-            "data" => $this->dataArray
+            "data" => $this->position,
+            "id" => $conn->resourceId
         ]));
+    
+        $this->broadcast([
+            "type" => "shape_update",
+            "shapes" => $this->shapes, // Az összes felhasználó alakzatainak listája
+        ]);
     }
+    
+    
 
 
     public function onMessage(ConnectionInterface $from, $msg) {
@@ -53,25 +69,31 @@ class WebSocketServer implements MessageComponentInterface {
                 return;
             }
     
-            $this->dataArray = $decoded["data"];
+            $this->position = $decoded["data"];
     
             // Frissítést elküldjük minden kliensnek
             $this->broadcast([
                 "type" => "data_update",
-                "data" => $this->dataArray
+                "data" => $this->position
             ]);
         }
     }
     
 
     public function onClose(ConnectionInterface $conn) {
+
+    
+        $this->clients->detach($conn);
+        $filteredShapes = array_filter($this->shapes, function($shape) use ($conn) {
+            return $shape['id'] === $conn->resourceId;
+        });
+        $this->shapes = $filteredShapes;
+        echo "Connection {$conn->resourceId} closed\n";
+
         $this->broadcast([
             "type" => "user_disconnected",
             "user_id" => $conn->resourceId
         ]);
-    
-        $this->clients->detach($conn);
-        echo "Connection {$conn->resourceId} closed\n";
     }
     
 
@@ -86,6 +108,8 @@ class WebSocketServer implements MessageComponentInterface {
         }
     }
 }
+
+
 
 // Event Loop létrehozása (ReactPHP)
 $loop = Factory::create();

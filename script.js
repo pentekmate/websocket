@@ -7,6 +7,12 @@ socket.onopen = () => {
 socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
+    console.log(data)
+    
+    if(data.type === "shape_update"){
+        data.shapes.map((item)=>generateShape(item.shape,item.id))
+    }
+
     if(data.type ==="user_disconnected"){
     //   alert(`user ${data.user_id} disconnected`)
     }
@@ -62,8 +68,16 @@ function makeDraggable(element) {
     }
 }
 
-function onAdd(){
-   const items = ["circle","triangle"]
-
+function generateShape(shapeName,user_id) {
+    const container = document.getElementById("shapeContainer");
    
+    
+    const element = document.createElement("div");
+    if (shapeName === "triangle") {
+        element.className = "triangle";
+    }
+    
+    container.appendChild(element);
+    element.innerHTML = user_id
 }
+
