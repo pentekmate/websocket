@@ -17,7 +17,6 @@ class WebSocketServer implements MessageComponentInterface {
 
     public function __construct() {
         $this->clients = new \SplObjectStorage;
-        $this->position = []; // Üres tömb kezdetben
         $this->shapes = [];
     }
 
@@ -28,13 +27,13 @@ class WebSocketServer implements MessageComponentInterface {
         // Felhasználóhoz rendelt shape tárolása asszociatív tömbként
         $this->shapes[] = [
             "id" => $conn->resourceId,
+            "position"=>[rand(0,100),rand(0,1000)],
             "shape" => "triangle" // Vagy bármilyen más alakzat
         ];
     
         // Új kliensnek elküldjük az aktuális tömböt
         $conn->send(json_encode([
             "type" => "data_update",
-            "data" => $this->position,
             "id" => $conn->resourceId
         ]));
     
@@ -63,29 +62,34 @@ class WebSocketServer implements MessageComponentInterface {
         }
     
         // Ha egy új tömb érkezik a klienstől, frissítjük
-        if ($decoded["type"] === "update_data") {
+        if ($decoded["type"] === "update_shape_position") {
             if (!isset($decoded["data"]) || !is_array($decoded["data"])) {
                 echo "Invalid data format\n";
                 return;
             }
-    
-            $this->position = $decoded["data"];
-    
+            
+            foreach ($this->shapes as $key => $value) {
+                if ($value['id'] === $decoded['id']) {
+                    // Frissítsd az adott elemet
+                    $this->shapes[$key]['position'] = $decoded['data']; // Példa új érték
+                }
+            }
+      
+            
+            
             // Frissítést elküldjük minden kliensnek
             $this->broadcast([
-                "type" => "data_update",
-                "data" => $this->position
+                "type" => "shape_movement",
+                "data" => $this->shapes
             ]);
         }
     }
     
 
-    public function onClose(ConnectionInterface $conn) {
-
-    
+    public function onClose(ConnectionInterface $conn) {    
         $this->clients->detach($conn);
         $filteredShapes = array_filter($this->shapes, function($shape) use ($conn) {
-            return $shape['id'] === $conn->resourceId;
+            return $shape['id'] !== $conn->resourceId;
         });
         $this->shapes = $filteredShapes;
         echo "Connection {$conn->resourceId} closed\n";
@@ -94,6 +98,7 @@ class WebSocketServer implements MessageComponentInterface {
             "type" => "user_disconnected",
             "user_id" => $conn->resourceId
         ]);
+
     }
     
 

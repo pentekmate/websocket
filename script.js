@@ -1,5 +1,5 @@
 const socket = new WebSocket("ws://localhost:8080");
-
+let id;
 socket.onopen = () => {
     console.log("Connected to WebSocket server");
 };
@@ -7,77 +7,89 @@ socket.onopen = () => {
 socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
-    console.log(data)
-    
+    if(data.type ==="data_update"){
+        document.getElementById('clientID').innerHTML = data.id
+        id = data.id
+    }
     if(data.type === "shape_update"){
-        data.shapes.map((item)=>generateShape(item.shape,item.id))
+        const container = document.getElementById("shapeContainer");    
+        container.innerHTML = ""
+        console.log(data)
+        data.shapes.map((item)=>generateShape(item.shape,item.id,item.position))
     }
 
     if(data.type ==="user_disconnected"){
-    //   alert(`user ${data.user_id} disconnected`)
+        document.getElementById('modal').innerHTML=`${data.user_id} disconnected`
+        deleteShape(data.user_id)
     }
-    if (Array.isArray(data.data) && data.data.length === 2) {
-        position = data.data;
-        const elmnt = document.getElementById("mydiv");
-        // Beállítjuk a kapott pozíciót
-        elmnt.style.left = position[0] + "px";
-        elmnt.style.top = position[1] + "px";
+    if(data.type ==="shape_movement"){
+        console.log(data)
     }
+
 };
 
 socket.onclose = () => {
     console.log("Disconnected from server");
 };
 
-// Tegyük draggable-é az elemet
-makeDraggable(document.getElementById("mydiv"));
 
-function makeDraggable(element) {
-    let posX = 0, posY = 0, mouseX = 0, mouseY = 0;
-    const header = document.getElementById(element.id + "header") || element;
 
-    header.onmousedown = dragMouseDown;
 
-    function dragMouseDown(e) {
-        e.preventDefault();
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-        document.onmouseup = closeDrag;
-        document.onmousemove = dragElement;
-    }
-
-    function dragElement(e) {
-        e.preventDefault();
-        posX = mouseX - e.clientX;
-        posY = mouseY - e.clientY;
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-
-        element.style.top = (element.offsetTop - posY) + "px";
-        element.style.left = (element.offsetLeft - posX) + "px";
-
-        // Küldjük az új pozíciót a szervernek
-        if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({type:"update_data", data: [element.offsetLeft, element.offsetTop] }));
-        }
-    }
-
-    function closeDrag() {
-        document.onmouseup = null;
-        document.onmousemove = null;
-    }
+function deleteShape(user_id){
+    const element = document.getElementById(`${user_id}`);  
+    element.remove()
 }
 
-function generateShape(shapeName,user_id) {
+
+function generateShape(shapeName, userId,position) {
     const container = document.getElementById("shapeContainer");
-   
-    
     const element = document.createElement("div");
+
+    element.id = userId;
+    element.style.position = "absolute";
+    
+    element.style.top=`${position[0]}px`
+    element.style.left=`${position[1]}px`
+    
     if (shapeName === "triangle") {
         element.className = "triangle";
     }
     
     container.appendChild(element);
-    element.innerHTML = user_id
+    element.innerHTML = userId;
+    // makeDraggable(element);
+
+
+    
+}
+
+
+
+function makeDraggable(element) {
+    let offsetX, offsetY;
+    element.onmousedown = function(e) {
+
+        if(id === Number(e.target.id)){
+            e.preventDefault();
+            offsetX = e.clientX - element.offsetLeft;
+            offsetY = e.clientY - element.offsetTop;
+            document.onmouseup = closeDrag;
+            document.onmousemove = dragElement;
+        }
+    };
+    
+    function dragElement(e) {
+        e.preventDefault();
+        element.style.top = (e.clientY - offsetY) + "px";
+        element.style.left = (e.clientX - offsetX) + "px";
+        let top = e.clientY - offsetY
+        let left = e.clientX - offsetX
+
+    }
+    
+    function closeDrag() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
 }
 
