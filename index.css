@@ -31,3 +31,44 @@
           user-select: none;
                             
 }
+
+
+.circle {
+  width: 100px;
+  height: 100px;
+  background-color: blue;
+  border-radius: 50%;
+}
+
+.square {
+  width: 100px;
+  height: 100px;
+  background-color: red;
+}
+.gate,.gate1,.gate2{
+  width: 300px;
+  height: 200px;
+  background-color: green;
+  position:absolute;
+  width:500px;
+  left:50%;
+  transform:translate(-50%,0)
+}
+
+.gate1{
+  top:0
+}
+.gate2{
+  bottom:0
+}
+
+
+
+#zero-point {
+  position: fixed; /* Mindig a viewport bal felső sarkában marad */
+  width: 10px;
+  height: 10px;
+  background: red;
+  top: 0;
+  left: 0;
+}

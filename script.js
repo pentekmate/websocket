@@ -6,24 +6,30 @@ socket.onopen = () => {
 
 socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
-
+ 
     if(data.type ==="data_update"){
         document.getElementById('clientID').innerHTML = data.id
         id = data.id
     }
     if(data.type === "shape_update"){
-        const container = document.getElementById("shapeContainer");    
-        container.innerHTML = ""
-        console.log(data)
-        data.shapes.map((item)=>generateShape(item.shape,item.id,item.position))
+       
+        if(data.userShapes){
+            const container = document.getElementById("shapeContainer");    
+            container.innerHTML = ""
+            data.userShapes.map((item)=>generateShape(item.shape,item.id,item.position))
+        }
     }
 
     if(data.type ==="user_disconnected"){
-        document.getElementById('modal').innerHTML=`${data.user_id} disconnected`
-        deleteShape(data.user_id)
+        if(data.userShapes){
+ 
+        const container = document.getElementById("shapeContainer");    
+        container.innerHTML = ""
+        data.userShapes.map((item)=>generateShape(item.shape,item.id,item.position))
+        }
     }
     if(data.type ==="shape_movement"){
-        console.log(data)
+        moveShape(data.id,data.position)
     }
 
 };
@@ -51,15 +57,13 @@ function generateShape(shapeName, userId,position) {
     element.style.top=`${position[0]}px`
     element.style.left=`${position[1]}px`
     
-    if (shapeName === "triangle") {
-        element.className = "triangle";
-    }
-    
+    element.className = `${shapeName}`
+
     container.appendChild(element);
     element.innerHTML = userId;
-    // makeDraggable(element);
+    makeDraggable(element);
 
-
+    console.log(shapeName)
     
 }
 
@@ -80,11 +84,32 @@ function makeDraggable(element) {
     
     function dragElement(e) {
         e.preventDefault();
+        let rect = element.getBoundingClientRect()
         element.style.top = (e.clientY - offsetY) + "px";
         element.style.left = (e.clientX - offsetX) + "px";
         let top = e.clientY - offsetY
         let left = e.clientX - offsetX
 
+        const update = {
+            type:"update_shape_position",
+            id:id,
+            position:[top,left,rect.right,rect.bottom]
+        }
+        let gate1 = [0,229,729,200];
+        let gate2 = [752,229,729,952];
+
+     
+
+
+
+        const condition1 = rect.left < gate1[2]  && rect.right > gate1[1]  &&
+        rect.top < gate1[3] && rect.bottom > gate1[0]
+
+        const condition2 = rect.left < gate2[2]  && rect.right > gate2[1]  &&
+        rect.top < gate2[3] && rect.bottom > gate2[0]
+        if(condition1 || condition2)
+        console.log(`Pozíció: Top ${Math.round(rect.top)}px, Left ${Math.round(rect.left)}px,Right ${Math.round(rect.right)}px,Bottom ${Math.round(rect.bottom)}px`)
+        socket.send(JSON.stringify(update))
     }
     
     function closeDrag() {
@@ -92,4 +117,29 @@ function makeDraggable(element) {
         document.onmousemove = null;
     }
 }
+
+function moveShape(id,position){
+    const element = document.getElementById(`${id}`)
+
+    element.style.top=`${position[0]}px`
+    element.style.left=`${position[1]}px`
+}
+
+
+function showPosition() {
+    const div = document.getElementById("gate1");
+    const rect = div.getBoundingClientRect(); // Lekéri az elem pozícióját
+
+    const div2 = document.getElementById("gate2");
+    const rect2 = div2.getBoundingClientRect(); // Lekéri az elem pozícióját
+
+    document.getElementById("gate1").innerHTML = 
+        `Pozíció: Top ${Math.round(rect.top)}px, Left ${Math.round(rect.left)}px,Right ${Math.round(rect.right)}px,Bottom ${Math.round(rect.bottom)}px`;
+
+    document.getElementById("gate2").innerHTML = 
+    `Pozíció: Top ${Math.round(rect2.top)}px, Left ${Math.round(rect2.left)}px,Right ${Math.round(rect2.right)}px,Bottom ${Math.round(rect2.bottom)}px,`;
+}
+
+showPosition()
+
 

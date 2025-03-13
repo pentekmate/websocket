@@ -1,3 +1,4 @@
+
 <?php
 
 require __DIR__ . '/vendor/autoload.php';
@@ -13,11 +14,15 @@ use Ratchet\WebSocket\WsServer;
 class WebSocketServer implements MessageComponentInterface {
     protected $clients;
     protected $position; // Itt tároljuk a frontend által küldött tömböt
-    protected $shapes;
+    protected $userShapes;
+
+    private $shapes = ["triangle","circle","square"];
+    private $gate1Position = [0,229,729,200];
+    private $gate2Position = [752,229,729,952];
 
     public function __construct() {
         $this->clients = new \SplObjectStorage;
-        $this->shapes = [];
+        $this->userShapes = [];
     }
 
     public function onOpen(ConnectionInterface $conn) {
@@ -25,10 +30,11 @@ class WebSocketServer implements MessageComponentInterface {
         echo "New connection ({$conn->resourceId})\n";
     
         // Felhasználóhoz rendelt shape tárolása asszociatív tömbként
-        $this->shapes[] = [
+        $this->userShapes[] = [
             "id" => $conn->resourceId,
             "position"=>[rand(0,100),rand(0,1000)],
-            "shape" => "triangle" // Vagy bármilyen más alakzat
+            "shape" => $this->shapes[rand(0, count($this->shapes) - 1)]
+
         ];
     
         // Új kliensnek elküldjük az aktuális tömböt
@@ -39,7 +45,7 @@ class WebSocketServer implements MessageComponentInterface {
     
         $this->broadcast([
             "type" => "shape_update",
-            "shapes" => $this->shapes, // Az összes felhasználó alakzatainak listája
+            "userShapes" => $this->userShapes, // Az összes felhasználó alakzatainak listája
         ]);
     }
     
@@ -63,24 +69,25 @@ class WebSocketServer implements MessageComponentInterface {
     
         // Ha egy új tömb érkezik a klienstől, frissítjük
         if ($decoded["type"] === "update_shape_position") {
-            if (!isset($decoded["data"]) || !is_array($decoded["data"])) {
+            if (!isset($decoded["position"]) || !is_array($decoded["position"])) {
                 echo "Invalid data format\n";
                 return;
             }
             
-            foreach ($this->shapes as $key => $value) {
+            foreach ($this->userShapes as $key => $value) {
                 if ($value['id'] === $decoded['id']) {
                     // Frissítsd az adott elemet
-                    $this->shapes[$key]['position'] = $decoded['data']; // Példa új érték
+                    $this->userShapes[$key]['position'] = $decoded['position']; // Példa új érték
                 }
             }
-      
+            
             
             
             // Frissítést elküldjük minden kliensnek
             $this->broadcast([
                 "type" => "shape_movement",
-                "data" => $this->shapes
+                "id" => $decoded['id'],
+                "position"=>$decoded['position']
             ]);
         }
     }
@@ -88,15 +95,16 @@ class WebSocketServer implements MessageComponentInterface {
 
     public function onClose(ConnectionInterface $conn) {    
         $this->clients->detach($conn);
-        $filteredShapes = array_filter($this->shapes, function($shape) use ($conn) {
+        $filtereduserShapes = array_filter($this->userShapes, function($shape) use ($conn) {
             return $shape['id'] !== $conn->resourceId;
         });
-        $this->shapes = $filteredShapes;
+        $this->userShapes = $filtereduserShapes;
         echo "Connection {$conn->resourceId} closed\n";
 
         $this->broadcast([
             "type" => "user_disconnected",
-            "user_id" => $conn->resourceId
+            "user_id" => $conn->resourceId,
+            "userShapes"=>$this->userShapes
         ]);
 
     }
