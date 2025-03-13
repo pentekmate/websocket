@@ -2,6 +2,7 @@
 <?php
 
 require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/Shape.php';
 
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
@@ -10,6 +11,7 @@ use React\Socket\SocketServer;
 use Ratchet\Server\IoServer;
 use Ratchet\Http\HttpServer;
 use Ratchet\WebSocket\WsServer;
+use Shape\Shape;
 
 class WebSocketServer implements MessageComponentInterface {
     protected $clients;
@@ -28,15 +30,13 @@ class WebSocketServer implements MessageComponentInterface {
     public function onOpen(ConnectionInterface $conn) {
         $this->clients->attach($conn);
         echo "New connection ({$conn->resourceId})\n";
-    
-        // Felhasználóhoz rendelt shape tárolása asszociatív tömbként
-        $this->userShapes[] = [
-            "id" => $conn->resourceId,
-            "position"=>[rand(0,100),rand(0,1000)],
-            "shape" => $this->shapes[rand(0, count($this->shapes) - 1)]
+        
+        $newShape = new Shape($conn->resourceId);
+        
+        // $this->userShapes[] = $newShape;
+        
+        array_push($this->userShapes,$newShape);
 
-        ];
-    
         // Új kliensnek elküldjük az aktuális tömböt
         $conn->send(json_encode([
             "type" => "data_update",
@@ -45,12 +45,16 @@ class WebSocketServer implements MessageComponentInterface {
     
         $this->broadcast([
             "type" => "shape_update",
-            "userShapes" => $this->userShapes, // Az összes felhasználó alakzatainak listája
+            "userShapes" => array_map(function($shape) {
+                return [
+                    "id" => $shape->id,
+                    "position" => $shape->position,
+                    "shape" => $shape->type
+                ];
+            }, $this->userShapes), // Átalakítjuk a Shape objektumokat egy tömbre
         ]);
     }
     
-    
-
 
     public function onMessage(ConnectionInterface $from, $msg) {
         // Ellenőrizzük, hogy a JSON érvényes-e
@@ -80,9 +84,20 @@ class WebSocketServer implements MessageComponentInterface {
                     $this->userShapes[$key]['position'] = $decoded['position']; // Példa új érték
                 }
             }
-            
-            
-            
+
+            $shapePosition = $decoded['position'];
+            $condition1 =  $shapePosition[1] < $this->gate1Position[2]  && $shapePosition[2] > $this->gate1Position[1]  &&
+            $shapePosition[0] < $this->gate1Position[3] && $shapePosition[3] > $this->gate1Position[0];
+
+            $condition2 =  $shapePosition[1] < $this->gate2Position[2]  && $shapePosition[2] > $this->gate2Position[1]  &&
+            $shapePosition[0] < $this->gate2Position[3] && $shapePosition[3] > $this->gate2Position[0];
+
+            if($condition1 || $condition2){
+                $this->broadcast([
+                    "type"=>"alert",
+                    "message"=>"{$decoded['id']} elérte a határt."
+                ]);
+            }
             // Frissítést elküldjük minden kliensnek
             $this->broadcast([
                 "type" => "shape_movement",
