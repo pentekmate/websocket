@@ -1,8 +1,8 @@
 
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
-require __DIR__ . '/Shape.php';
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/GameController.php';
 
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
@@ -12,37 +12,31 @@ use Ratchet\Server\IoServer;
 use Ratchet\Http\HttpServer;
 use Ratchet\WebSocket\WsServer;
 use Shape\Shape;
+use GameController\GameController;
 
 class WebSocketServer implements MessageComponentInterface {
     protected $clients;
-    protected $position; // Itt tároljuk a frontend által küldött tömböt
-    protected $userShapes;
-
-    private $shapes = ["triangle","circle","square"];
-    private $gate1Position = [0,229,729,200];
-    private $gate2Position = [752,229,729,952];
+    private $game;
 
     public function __construct() {
         $this->clients = new \SplObjectStorage;
-        $this->userShapes = [];
+        $this->game = new GameController();
     }
 
     public function onOpen(ConnectionInterface $conn) {
         $this->clients->attach($conn);
         echo "New connection ({$conn->resourceId})\n";
         
-        $newShape = new Shape($conn->resourceId);
+        $this->game->createShape($conn->resourceId);
         
-        // $this->userShapes[] = $newShape;
-        
-        array_push($this->userShapes,$newShape);
-
         // Új kliensnek elküldjük az aktuális tömböt
         $conn->send(json_encode([
             "type" => "data_update",
             "id" => $conn->resourceId
         ]));
-    
+        
+
+        $shapes = $this->game->getShapes();
         $this->broadcast([
             "type" => "shape_update",
             "userShapes" => array_map(function($shape) {
@@ -51,7 +45,7 @@ class WebSocketServer implements MessageComponentInterface {
                     "position" => $shape->position,
                     "shape" => $shape->type
                 ];
-            }, $this->userShapes), // Átalakítjuk a Shape objektumokat egy tömbre
+            },$shapes), // Átalakítjuk a Shape objektumokat egy tömbre
         ]);
     }
     
@@ -78,21 +72,11 @@ class WebSocketServer implements MessageComponentInterface {
                 return;
             }
             
-            foreach ($this->userShapes as $key => $value) {
-                if ($value['id'] === $decoded['id']) {
-                    // Frissítsd az adott elemet
-                    $this->userShapes[$key]['position'] = $decoded['position']; // Példa új érték
-                }
-            }
+            $this->game->moveShape($decoded['id'],$decoded['position']);
 
-            $shapePosition = $decoded['position'];
-            $condition1 =  $shapePosition[1] < $this->gate1Position[2]  && $shapePosition[2] > $this->gate1Position[1]  &&
-            $shapePosition[0] < $this->gate1Position[3] && $shapePosition[3] > $this->gate1Position[0];
+            
 
-            $condition2 =  $shapePosition[1] < $this->gate2Position[2]  && $shapePosition[2] > $this->gate2Position[1]  &&
-            $shapePosition[0] < $this->gate2Position[3] && $shapePosition[3] > $this->gate2Position[0];
-
-            if($condition1 || $condition2){
+            if($this->game->checkPosition([$decoded['position']])){
                 $this->broadcast([
                     "type"=>"alert",
                     "message"=>"{$decoded['id']} elérte a határt."
@@ -110,16 +94,21 @@ class WebSocketServer implements MessageComponentInterface {
 
     public function onClose(ConnectionInterface $conn) {    
         $this->clients->detach($conn);
-        $filtereduserShapes = array_filter($this->userShapes, function($shape) use ($conn) {
-            return $shape['id'] !== $conn->resourceId;
-        });
-        $this->userShapes = $filtereduserShapes;
-        echo "Connection {$conn->resourceId} closed\n";
+        $this->game->removeShape($conn->resourceId);
 
+        
+        echo "Connection {$conn->resourceId} closed\n";
+        $shapes = $this->game->getShapes();
         $this->broadcast([
             "type" => "user_disconnected",
             "user_id" => $conn->resourceId,
-            "userShapes"=>$this->userShapes
+            "userShapes" => array_map(function($shape) {
+                return [
+                    "id" => $shape->id,
+                    "position" => $shape->position,
+                    "shape" => $shape->type
+                ];
+            },$shapes), // Átalakítjuk a Shape objektumokat egy tömbre
         ]);
 
     }

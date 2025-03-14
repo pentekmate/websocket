@@ -24,7 +24,7 @@ socket.onmessage = (event) => {
 
     if(data.type ==="user_disconnected"){
         if(data.userShapes){
- 
+        
         const container = document.getElementById("shapeContainer");    
         container.innerHTML = ""
         data.userShapes.map((item)=>generateShape(item.shape,item.id,item.position))
@@ -96,17 +96,7 @@ function makeDraggable(element) {
             id:id,
             position:[top,left,rect.right,rect.bottom]
         }
-        // let gate1 = [0,229,729,200];
-        // let gate2 = [752,229,729,952];
-
-
-        // const condition1 = rect.left < gate1[2]  && rect.right > gate1[1]  &&
-        // rect.top < gate1[3] && rect.bottom > gate1[0]
-
-        // const condition2 = rect.left < gate2[2]  && rect.right > gate2[1]  &&
-        // rect.top < gate2[3] && rect.bottom > gate2[0]
-        // if(condition1 || condition2)
-        // console.log(`Pozíció: Top ${Math.round(rect.top)}px, Left ${Math.round(rect.left)}px,Right ${Math.round(rect.right)}px,Bottom ${Math.round(rect.bottom)}px`)
+        
         socket.send(JSON.stringify(update))
     }
     
