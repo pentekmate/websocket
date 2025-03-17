@@ -27,7 +27,7 @@ class Shape {
     }
 
     private function generatePositon(): array {
-        // ❗ Most már elérjük a `Gate` pozícióit az objektumon keresztül
+       
         $top = rand($this->gate1Position->position[0], $this->gate2Position->position[0]);
         $left = rand($this->gate1Position->position[1], $this->gate2Position->position[1]);
         $right = rand($this->gate1Position->position[2], $this->gate2Position->position[2]);
@@ -43,4 +43,10 @@ class Shape {
     public function getPosition() {
         return $this->position;
     }
+
+
+    public function resetPosition(){
+        return $this->position = $this->generatePositon();
+    }
+
 }

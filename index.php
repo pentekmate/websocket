@@ -74,15 +74,31 @@ class WebSocketServer implements MessageComponentInterface {
             
             $this->game->moveShape($decoded['id'],$decoded['position']);
 
-            
+        
 
-            if($this->game->checkPosition([$decoded['position']])){
+
+            if($this->game->checkPosition($decoded['position'])){
+                $this->game->restoreShapePosition();
+
                 $this->broadcast([
                     "type"=>"alert",
                     "message"=>"{$decoded['id']} elérte a határt."
                 ]);
+                $shapes = $this->game->getShapes();
+                $this->broadcast([
+                    "type" => "shape_reset",
+                    "userShapes" => array_map(function($shape) {
+                        return [
+                            "id" => $shape->id,
+                            "position" => $shape->position,
+                            "shape" => $shape->type
+                        ];
+                    },$shapes),
+                ]);
+
+               
             }
-            // Frissítést elküldjük minden kliensnek
+          
             $this->broadcast([
                 "type" => "shape_movement",
                 "id" => $decoded['id'],

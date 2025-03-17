@@ -12,11 +12,13 @@ class GameController{
     public $gate2;
     public $shapes;
     
-
+    //home:
+    // 0,689,1189,200
+    // 726,689,1189,926
 
     public function __construct(){
-        $this->gate1 = new Gate([0, 229, 729, 200]);
-        $this->gate2 = new Gate([752, 229, 729, 952]);
+        $this->gate1 = new Gate([0,689,1189,200]);
+        $this->gate2 = new Gate([726,689,1189,926]);
         $this->shapes=[];
     }
 
@@ -40,24 +42,47 @@ class GameController{
     }
 
 
-    public function checkPosition($position){
-        // Példa logika: ellenőrizzük, hogy a pozíció elérte-e valamelyik kaput
-        $gate1Condition = $position[0] < $this->gate1->position[2] && $position[1] > $this->gate1->position[1];
-        $gate2Condition = $position[0] < $this->gate2->position[2] && $position[1] > $this->gate2->position[1];
-        
-       $gyasz = $positon[0];
-       echo $gyasz;
+    public function checkPosition($position) {
+        $gate1Condition = 
+            $position[3] >= $this->gate1->position[0] && 
+            $position[0] <= $this->gate1->position[3] &&             
+            $position[2] >= $this->gate1->position[1] && 
+            $position[1] <= $this->gate1->position[2];     
 
-        return $gate1Condition || $gate2Condition;
+        $gate2Condition = 
+            $position[3] >= $this->gate2->position[0] &&
+            $position[0] <= $this->gate2->position[3] &&
+            $position[2] >= $this->gate2->position[1] &&
+            $position[1] <= $this->gate2->position[2];
+    
+       if($gate1Condition || $gate2Condition){
+        echo "shape";
+        print_r($position);
+        echo "gt1";
+        print_r($this->gate1->position);
+        echo "gt2";
+        print_r($this->gate2->position);
+        return true;
+
+       }
     }
+    
 
     public function moveShape($id, $position){
         foreach ($this->shapes as $key => $shape) {
             if ($shape->id === $id) {
-                // Helyesen frissítjük az adott elem pozícióját
-                $shape->position = $position; // A helyes mód
+               
+                $shape->position = $position; 
                 break;
             }
+        }
+    }
+
+
+
+    public function restoreShapePosition(){
+        foreach($this->shapes as $shape){
+            $shape->resetPosition();
         }
     }
 

@@ -14,7 +14,7 @@ socket.onmessage = (event) => {
         id = data.id
     }
     if(data.type === "shape_update"){
-       
+       console.log(data)
         if(data.userShapes){
             const container = document.getElementById("shapeContainer");    
             container.innerHTML = ""
@@ -33,6 +33,23 @@ socket.onmessage = (event) => {
     if(data.type ==="shape_movement"){
         moveShape(data.id,data.position)
     }
+
+
+    if(data.type === "shape_reset"){
+        const element = document.getElementById(data.id);
+    
+        if (element) {
+        
+            const newElement = element.cloneNode(true);
+            element.parentNode.replaceChild(newElement, element);
+        }
+        
+        const container = document.getElementById("shapeContainer");    
+        container.innerHTML = ""
+        const timeOut = setTimeout(()=>{
+            data.userShapes.map((item)=>generateShape(item.shape,item.id,item.position))
+        },1000)
+     }
 
 };
 
@@ -96,6 +113,8 @@ function makeDraggable(element) {
             id:id,
             position:[top,left,rect.right,rect.bottom]
         }
+
+        
         
         socket.send(JSON.stringify(update))
     }
