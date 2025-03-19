@@ -72,3 +72,8 @@
   top: 0;
   left: 0;
 }
+
+
+.userShape{
+  border: 5px solid orange;
+}

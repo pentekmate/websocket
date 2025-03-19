@@ -2,7 +2,7 @@
 <?php
 
 require_once __DIR__ . '/vendor/autoload.php';
-require_once __DIR__ . '/GameController.php';
+require_once __DIR__ . '/Controllers//GameController.php';
 
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
@@ -74,15 +74,14 @@ class WebSocketServer implements MessageComponentInterface {
             
             $this->game->moveShape($decoded['id'],$decoded['position']);
 
-        
-
-
-            if($this->game->checkPosition($decoded['position'])){
+            if($this->game->checkPosition($decoded['position'],$decoded['id'])){
+                $currentResult = json_encode($this->game->getResult());
                 $this->game->restoreShapePosition();
 
                 $this->broadcast([
                     "type"=>"alert",
-                    "message"=>"{$decoded['id']} elérte a határt."
+                    "message"=>"{$decoded['id']} elérte a határt.",
+                    "result"=>"{$currentResult}"
                 ]);
                 $shapes = $this->game->getShapes();
                 $this->broadcast([

@@ -12,11 +12,12 @@ class Shape {
     public $type;
     public $position;
     public $id;
+    private $shapeSize = 100;
 
     private $gate1Position;
     private $gate2Position;
 
-    private $shapes = ["triangle", "circle", "square"];
+    private $shapes = ["circle", "square"];
 
     public function __construct($id,$gate1Position,$gate2Position) {
         $this->gate1Position = $gate1Position;
@@ -27,11 +28,15 @@ class Shape {
     }
 
     private function generatePositon(): array {
-       
-        $top = rand($this->gate1Position->position[0], $this->gate2Position->position[0]);
+        $buffer = 20;
         $left = rand($this->gate1Position->position[1], $this->gate2Position->position[1]);
         $right = rand($this->gate1Position->position[2], $this->gate2Position->position[2]);
-        $bottom = rand($this->gate1Position->position[3], $this->gate2Position->position[3]);
+       
+        $top = rand($this->gate1Position->position[3] + $this->shapeSize + $buffer, 
+        $this->gate2Position->position[0] - $this->shapeSize - $buffer);
+
+        $bottom = rand($this->gate1Position->position[3] + $this->shapeSize + $buffer, 
+           $this->gate2Position->position[0] - $this->shapeSize - $buffer);
 
         return [$top, $left, $right, $bottom];
     }

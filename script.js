@@ -7,10 +7,25 @@ socket.onopen = () => {
 socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
     if(data.type === "alert"){
-        console.log(data)
+        const resultContainer=document.getElementById('result')
+        let result = ""
+
+        if(data.result){
+            Object.entries(JSON.parse(data.result)).forEach(([key, value]) => {
+               result+=`${key}:${value}`
+            });
+
+            resultContainer.innerHTML=result
+        }
+
+        const modalContainer = document.getElementById('modal')
+        modalContainer.innerHTML = data.message
+
+        const timeOut = setTimeout(()=>{
+           modalContainer.innerHTML = ""
+        },1000)
     }
     if(data.type ==="data_update"){
-        document.getElementById('clientID').innerHTML = data.id
         id = data.id
     }
     if(data.type === "shape_update"){
@@ -77,6 +92,11 @@ function generateShape(shapeName, userId,position) {
     element.style.left=`${position[1]}px`
     
     element.className = `${shapeName}`
+
+
+    if(element.id == id){
+        element.classList.add("userShape");
+    }
 
     container.appendChild(element);
     element.innerHTML = userId;
